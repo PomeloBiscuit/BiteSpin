@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fff8ef">
+  <meta name="description" content="勾選想吃的店家，轉動公平隨機轉盤，決定今天吃什麼。支援新增、修改、刪除店家並自動記住清單。">
+  <title>今天吃什麼？｜店家選擇轉盤</title>
+  <style>
+    :root{--ink:#283246;--muted:#7d8491;--orange:#ff794d;--orange-dark:#e45b33;--bg:#fff8ef;--card:#fff;--line:#ece9e5;--shadow:0 18px 55px rgba(94,57,29,.075)}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 8% 0%,#ffe1bd 0,transparent 36%),radial-gradient(ellipse at 96% 19%,#eedbff 0,transparent 28%),var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;-webkit-font-smoothing:antialiased}
+    button,input{font:inherit}
+    button{cursor:pointer}
+    button:disabled{cursor:not-allowed;opacity:.52}
+    button:focus-visible,input:focus-visible{outline:3px solid #ffbd8c;outline-offset:3px}
+    .shell{max-width:1180px;margin:auto;padding:38px 24px 35px}
+    .hero{text-align:center;margin:0 auto 29px}
+    .eyebrow{font-size:12px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#dd7647}
+    h1{font-size:clamp(32px,5.3vw,52px);letter-spacing:-1.5px;margin:7px 0 8px;line-height:1.22}
+    .hero p{color:#7d7580;font-size:15px;margin:0}
+    .layout{display:grid;grid-template-columns:minmax(290px,.9fr) minmax(0,1.1fr);gap:23px;align-items:start}
+    .card{background:rgba(255,255,255,.94);border-radius:26px;box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.97)}
+    .choices{padding:24px}
+    .card-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .card h2{font-size:20px;margin:0;letter-spacing:-.4px}
+    .count-pill{white-space:nowrap;background:#fff0e5;color:#b35d36;border-radius:99px;padding:7px 11px;font-size:12px;font-weight:800}
+    .hint{font-size:13px;color:var(--muted);margin:10px 0 17px;line-height:1.65}
+    .add-row{display:flex;gap:8px;align-items:stretch}
+    .add-input{min-width:0;flex:1;padding:12px 13px;border:1.5px solid #e8e4e0;border-radius:12px;color:var(--ink);background:#fff;font-size:14px}
+    .add-input::placeholder{color:#a0a2a9}
+    .add-button{border:0;background:var(--ink);color:white;border-radius:12px;font-size:14px;font-weight:850;padding:10px 17px;white-space:nowrap}
+    .add-button:hover{background:#3e4b61}
+    .form-tip{font-size:11px;color:#9a9ca5;margin:8px 0 18px}
+    .list-toolbar{display:flex;align-items:center;justify-content:space-between;padding:0 1px 10px;border-bottom:1px solid var(--line);gap:10px}
+    .list-label{font-size:13px;font-weight:800;color:#737985}
+    .toolbar-actions{display:flex;gap:9px}
+    .link-btn{border:0;background:transparent;color:#e36a41;font-weight:750;font-size:12px;padding:5px 1px}
+    .link-btn:hover{text-decoration:underline}
+    .list{max-height:369px;min-height:108px;overflow-y:auto;margin-top:8px;scrollbar-color:#e9d8cc transparent;scrollbar-width:thin}
+    .entry{display:flex;align-items:center;gap:11px;padding:11px 6px;border-bottom:1px solid #f2f0ee;min-height:53px}
+    .entry:last-child{border-bottom:0}
+    .check-wrap{display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer}
+    .check-wrap input{appearance:none;width:21px;height:21px;border-radius:7px;border:2px solid #d6d8dd;flex-shrink:0;display:grid;place-items:center;margin:0;cursor:pointer}
+    .check-wrap input:checked{background:#fd8357;border-color:#fd8357}
+    .check-wrap input:checked::after{content:"✓";font-weight:900;color:white;font-size:14px}
+    .name{font-size:14px;font-weight:700;overflow-wrap:anywhere;min-width:0}
+    .entry:has(input:not(:checked)) .name{color:#9c9fa8;font-weight:500}
+    .item-action{width:29px;height:30px;display:grid;place-items:center;border:0;background:transparent;border-radius:8px;color:#b5b5bc;font-size:17px;flex-shrink:0}
+    .item-action:hover{background:#fff0e8;color:#d5633d}
+    .edit-input{min-width:0;flex:1;border:1.5px solid #ffc4a5;border-radius:7px;padding:7px 8px;font-size:14px;width:100%}
+    .empty{text-align:center;color:#969aa4;font-size:13px;line-height:1.8;padding:28px 10px}
+    .reset{margin-top:17px;border:1px solid #ebe8e4;color:#858b96;background:#fff;width:100%;border-radius:12px;padding:11px;font-size:12px;font-weight:750}
+    .reset:hover{border-color:#fab98e;color:#bc6440}
+    .spin-card{padding:24px 22px 22px;text-align:center;overflow:hidden}
+    .spin-card h2{margin-bottom:4px}
+    .spin-sub{font-size:13px;color:var(--muted);margin:7px 0 5px;min-height:19px}
+    .wheel-zone{width:min(100%,470px);aspect-ratio:1;position:relative;margin:9px auto 17px;display:grid;place-items:center}
+    .wheel-bg{position:absolute;width:95%;height:95%;border-radius:50%;box-shadow:0 13px 24px #54372d24,0 0 0 7px #ffce83,0 0 0 12px #fff0d7;pointer-events:none}
+    canvas{position:relative;width:95%;height:95%;border-radius:50%;z-index:1;display:block}
+    .pointer{position:absolute;top:-3px;left:50%;transform:translateX(-50%);z-index:4;width:0;height:0;border-left:19px solid transparent;border-right:19px solid transparent;border-top:37px solid #333e55;filter:drop-shadow(0 3px 1px #ffffffcc)}
+    .hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;width:70px;height:70px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,#ffe9b2,#ffb45c);border:6px solid white;box-shadow:0 3px 12px #9f653a55;color:#7c4a24;font-size:29px;pointer-events:none}
+    .spin-button{width:min(100%,382px);border:0;border-radius:17px;background:linear-gradient(100deg,#ff9c5b,#fb664c);box-shadow:0 7px 0 #d85a3e,0 13px 22px #e7694740;color:white;font-size:19px;font-weight:900;padding:17px 14px;transition:transform .16s,box-shadow .16s;letter-spacing:.2px}
+    .spin-button:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 9px 0 #d85a3e,0 16px 23px #e7694740}
+    .spin-button:not(:disabled):active{transform:translateY(5px);box-shadow:0 2px 0 #d85a3e}
+    .result{min-height:85px;margin:22px auto 2px;padding:16px;border-radius:17px;background:#f8f8f9;max-width:442px;border:1px solid #eeeff1;display:flex;flex-direction:column;justify-content:center;gap:6px}
+    .result.is-win{background:#fff1d9;border-color:#ffd6aa}
+    .result h3{margin:0;font-size:19px;color:#404754;line-height:1.4;overflow-wrap:anywhere}
+    .result.is-win h3{color:#cb5739;font-size:23px}
+    .result p{font-size:12px;margin:0;color:#8a8990}
+    .history-box{text-align:left;padding:18px 0 0;margin-top:17px;border-top:1px solid #eeeeef}
+    .history-title{font-size:13px;font-weight:850;display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+    .history-title button{border:0;background:none;color:#a0a3ac;font-size:12px}
+    .history-list{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+    .history-list li{font-size:13px;display:flex;justify-content:space-between;gap:15px;color:#697080}
+    .history-list strong{font-size:13px;color:#485163;max-width:70%;overflow-wrap:anywhere}
+    .history-empty{font-size:12px;color:#aaaab2}
+    .foot{text-align:center;color:#9a9390;font-size:12px;margin-top:25px;line-height:1.8}
+    .notice{height:18px;color:#c55b3a;font-size:12px;margin-top:7px;opacity:0;transition:opacity .2s}
+    .notice.show{opacity:1}
+    @media(max-width:790px){.shell{padding:23px 13px 25px}.layout{display:flex;flex-direction:column-reverse;gap:14px}.layout>.card{width:100%}.choices{padding:19px}.spin-card{padding:20px 16px}.wheel-zone{max-width:380px;margin:5px auto 14px}.hero{margin-bottom:17px}h1{font-size:32px}.hero p{font-size:13px}.list{max-height:315px}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <header class="hero">
+    <div class="eyebrow">YOUR FOOD, YOUR FATE ✨</div>
+    <h1>🍜 今天吃什麼？</h1>
+    <p>選擇障礙救星！先勾選想吃的店家，再交給轉盤決定。</p>
+  </header>
+  <div class="layout">
+    <section class="card choices" aria-labelledby="choices-title">
+      <div class="card-top"><h2 id="choices-title">📝 候選店家</h2><span class="count-pill" id="count">已選 0 家</span></div>
+      <p class="hint">只會從有勾選的選項中抽出結果。店家和餐點都能加入，想吃什麼由你決定。</p>
+      <form id="add-form" class="add-row" autocomplete="off">
+        <input type="text" class="add-input" id="new-name" placeholder="例如：阿明鹽酥雞、牛肉麵店" maxlength="300" aria-label="新增店家或食物名稱">
+        <button class="add-button" type="submit">＋ 新增</button>
+      </form>
+      <p class="form-tip">一次可新增多家，以逗號「，」分隔。</p>
+      <div class="list-toolbar">
+        <span class="list-label" id="total">我的口袋名單</span>
+        <div class="toolbar-actions"><button class="link-btn" id="select-all" type="button">全選</button><button class="link-btn" id="select-none" type="button">全部取消</button></div>
+      </div>
+      <div id="choice-list" class="list" aria-label="可勾選的店家清單"></div>
+      <button class="reset" id="reset" type="button">↺ 還原預設範例清單</button>
+      <div id="notice" class="notice" role="status" aria-live="polite"></div>
+    </section>
+    <section class="card spin-card" aria-labelledby="wheel-title">
+      <h2 id="wheel-title">🎡 美食命運轉盤</h2>
+      <p id="chance" class="spin-sub">每個勾選選項都有相同的中獎機率</p>
+      <div class="wheel-zone" aria-label="隨機美食轉盤">
+        <div class="wheel-bg"></div>
+        <canvas id="wheel" role="img" aria-label="轉盤目前顯示已勾選的店家"></canvas>
+        <div class="pointer" aria-hidden="true"></div>
+        <div class="hub" aria-hidden="true">🍴</div>
+      </div>
+      <button class="spin-button" id="spin" type="button">🍗 開始轉盤！</button>
+      <div class="result" id="result" role="status" aria-live="polite">
+        <h3 id="result-name">今天這餐交給命運！</h3><p id="result-caption">勾選想吃的店家，按下按鈕開始旋轉。</p>
+      </div>
+      <div class="history-box">
+        <div class="history-title"><span>🕘 最近抽中的店家</span><button id="clear-history" type="button">清除紀錄</button></div>
+        <ul class="history-list" id="history"></ul>
+      </div>
+    </section>
+  </div>
+  <footer class="foot">🔒 所有店家名稱及抽選紀錄只儲存在你目前的瀏覽器中，不需註冊，也不會上傳。</footer>
+</main>
+<script>
+(()=>{
+  'use strict';
+  const STORE_KEY='food-wheel-options-v1';
+  const HISTORY_KEY='food-wheel-history-v1';
+  const EXAMPLES=['鹽酥雞店','牛肉麵店','便當店','滷味店','火鍋店','拉麵店','水餃店','義大利麵店','燒肉店','披薩店'];
+  const COLORS=['#FBA976','#FFCD74','#82D8BF','#A9C9FF','#C8ADFA','#FFABBA','#93DBC9','#F2CC8E','#8BBDEB','#F5A8DB'];
+  const TAU=Math.PI*2;
+  const $=id=>document.getElementById(id);
+  const canvas=$('wheel'),ctx=canvas.getContext('2d');
+  let options=loadOptions(),history=loadHistory(),rotation=0,spinning=false,noticeTimer=null;
+  let pixelSize=460;
+
+  function storageGet(key){try{return localStorage.getItem(key)}catch{return null}}
+  function storageSet(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch{/* private browsing may block storage */}}
+  function uuid(){return (globalThis.crypto&&crypto.randomUUID)?crypto.randomUUID():'id-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)}
+  function defaults(){return EXAMPLES.map(name=>({id:uuid(),name,checked:true}))}
+  function loadOptions(){
+    const raw=storageGet(STORE_KEY);
+    if(raw===null)return defaults();
+    try{
+      const parsed=JSON.parse(raw);
+      if(!Array.isArray(parsed))return defaults();
+      const seen=new Set();
+      return parsed.filter(v=>v&&typeof v.name==='string'&&v.name.trim())
+        .slice(0,200).map(v=>({id:uuid(),name:v.name.trim().slice(0,70),checked:!!v.checked}))
+        .filter(v=>{const n=v.name.toLocaleLowerCase();if(seen.has(n))return false;seen.add(n);return true});
+    }catch{return defaults()}
+  }
+  function loadHistory(){
+    try{const parsed=JSON.parse(storageGet(HISTORY_KEY)||'[]');return Array.isArray(parsed)?parsed.filter(v=>v&&typeof v.name==='string'&&typeof v.time==='number').slice(0,6):[]}
+    catch{return []}
+  }
+  function selected(){return options.filter(o=>o.checked)}
+  function save(){storageSet(STORE_KEY,options)}
+  function showNotice(msg){const el=$('notice');el.textContent=msg;el.classList.add('show');clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>el.classList.remove('show'),3600)}
+  function createButton(label,action,id,title){const b=document.createElement('button');b.type='button';b.className='item-action';b.textContent=label;b.dataset.action=action;b.dataset.id=id;b.setAttribute('aria-label',title);b.title=title;b.disabled=spinning;return b}
+  function renderList(){
+    const box=$('choice-list');box.replaceChildren();
+    if(!options.length){const empty=document.createElement('div');empty.className='empty';empty.textContent='目前沒有候選店家。先新增一家，讓美食名單熱鬧起來！';box.appendChild(empty)}
+    const frag=document.createDocumentFragment();
+    options.forEach(o=>{
+      const entry=document.createElement('div');entry.className='entry';entry.dataset.id=o.id;
+      const label=document.createElement('label');label.className='check-wrap';
+      const input=document.createElement('input');input.type='checkbox';input.checked=o.checked;input.disabled=spinning;input.dataset.id=o.id;
+      input.setAttribute('aria-label','選擇 '+o.name);
+      const name=document.createElement('span');name.className='name';name.textContent=o.name;
+      label.append(input,name);entry.append(label);
+      entry.append(createButton('✎','edit',o.id,'修改 '+o.name));
+      entry.append(createButton('×','delete',o.id,'刪除 '+o.name));
+      frag.appendChild(entry);
+    });
+    box.appendChild(frag);
+    $('count').textContent=`已選 ${selected().length} 家`;
+    $('total').textContent=`我的口袋名單 · 共 ${options.length} 家`;
+    $('spin').disabled=spinning||selected().length===0;
+    $('spin').textContent=spinning?'🎡 命運轉動中…':'🍗 開始轉盤！';
+    $('chance').textContent=selected().length>0?`目前 ${selected().length} 個候選選項，每家中獎機率 ${(100/selected().length).toLocaleString('zh-TW',{maximumFractionDigits:2})}%`:'請至少勾選 1 個選項';
+    for(const id of ['new-name','select-all','select-none','reset'])$(id).disabled=spinning;
+    document.querySelector('#add-form button').disabled=spinning;
+  }
+  function renderHistory(){
+    const list=$('history');list.replaceChildren();
+    if(!history.length){const el=document.createElement('li');el.className='history-empty';el.textContent='還沒有紀錄，轉一次試試看！';list.appendChild(el);return}
+    for(const item of history){
+      const li=document.createElement('li'),name=document.createElement('strong'),time=document.createElement('span');
+      name.textContent='🍽️ '+item.name;time.textContent=new Date(item.time).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      li.append(name,time);list.appendChild(li);
+    }
+  }
+  function resizeCanvas(){
+    const dpr=Math.min(window.devicePixelRatio||1,2.5);
+    const logical=480;pixelSize=logical;
+    canvas.width=Math.round(logical*dpr);canvas.height=Math.round(logical*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);drawWheel();
+  }
+  function angleMod(x){return ((x%TAU)+TAU)%TAU}
+  function drawWheel(){
+    const s=pixelSize,cx=s/2,cy=s/2,r=s/2-5;
+    ctx.clearRect(0,0,s,s);
+    const items=selected();
+    if(!items.length){
+      ctx.beginPath();ctx.arc(cx,cy,r,0,TAU);ctx.fillStyle='#f5f2ed';ctx.fill();
+      ctx.fillStyle='#a5a5af';ctx.textAlign='center';ctx.font='700 20px system-ui';ctx.fillText('請先勾選想吃的店家',cx,cy-65);return;
+    }
+    const n=items.length,sector=TAU/n,start=-Math.PI/2-sector/2;
+    const palette=items.map((_,i)=>COLORS[i%COLORS.length]);
+    // The selected item is chosen uniformly before the spin. This drawing is purely visual.
+    items.forEach((o,i)=>{
+      const a=start+i*sector+rotation,b=a+sector,mid=(a+b)/2;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,a,b);ctx.closePath();ctx.fillStyle=palette[i];ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,.98)';ctx.lineWidth=n>30?1.5:3.2;ctx.stroke();
+      const labelRadius=r*(n>18?.77:n>9?.73:.66);
+      const px=cx+Math.cos(mid)*labelRadius,py=cy+Math.sin(mid)*labelRadius;
+      ctx.save();ctx.translate(px,py);
+      let orient=mid+Math.PI/2;
+      if(Math.cos(orient)<0)orient+=Math.PI;
+      ctx.rotate(orient);
+      let fontSize=n>28?10:n>18?12:n>12?14:n>8?16:19;
+      let text=o.name;
+      const maxWidth=Math.max(35,r*(n>18?.31:.57));
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
+      ctx.font=`900 ${fontSize}px system-ui, "Noto Sans TC", sans-serif`;
+      while(text.length>2&&ctx.measureText(text).width>maxWidth)text=text.slice(0,-1);
+      if(text.length<o.name.length)text+='…';
+      ctx.strokeStyle='#ffffffd9';ctx.lineWidth=n>20?2:4.5;
+      ctx.strokeText(text,0,0,maxWidth+12);
+      ctx.fillStyle='#344154';ctx.fillText(text,0,0,maxWidth+12);
+      ctx.restore();
+    });
+    ctx.beginPath();ctx.arc(cx,cy,r-2,0,TAU);ctx.strokeStyle='#e5aa60';ctx.lineWidth=6;ctx.stroke();
+    ctx.beginPath();ctx.arc(cx,cy,r-9,0,TAU);ctx.strokeStyle='#fff3d9b3';ctx.lineWidth=2;ctx.stroke();
+  }
+  function secureRandom(max){
+    // Rejection sampling avoids modulo bias. Fallback is only for older browser contexts.
+    if(globalThis.crypto&&typeof crypto.getRandomValues==='function'){
+      const arr=new Uint32Array(1),range=4294967296,limit=Math.floor(range/max)*max;
+      do{crypto.getRandomValues(arr)}while(arr[0]>=limit);
+      return arr[0]%max;
+    }
+    return Math.floor(Math.random()*max);
+  }
+  function addNames(raw){
+    if(spinning)return;
+    const names=raw.split(/[,，、\n]+/).map(x=>x.trim()).filter(Boolean);
+    if(!names.length){showNotice('請先輸入店家或餐點名稱。');return}
+    const seen=new Set(options.map(o=>o.name.toLocaleLowerCase()));
+    let added=0,duplicates=0;
+    for(const name of names){
+      const clean=name.slice(0,70),key=clean.toLocaleLowerCase();
+      if(seen.has(key)){duplicates++;continue}
+      if(options.length>=200){showNotice('最多可以儲存 200 個選項。');break}
+      options.push({id:uuid(),name:clean,checked:true});seen.add(key);added++;
+    }
+    if(added){$('new-name').value='';save();renderList();drawWheel()}
+    showNotice(added?`已新增 ${added} 個選項${duplicates?'，略過 '+duplicates+' 個重複名稱':''}。`:'這些名稱已經在清單裡囉！');
+  }
+  function setResult(title,subtitle,isWin){$('result-name').textContent=title;$('result-caption').textContent=subtitle;$('result').classList.toggle('is-win',!!isWin)}
+  function spin(){
+    if(spinning)return;
+    const items=selected();
+    if(!items.length){showNotice('請至少勾選 1 個候選店家！');return}
+    spinning=true;renderList();setResult('轉盤轉動中… 🎡','命運正為你的晚餐努力工作。',false);
+    const winner=secureRandom(items.length); // uniform among selected candidates
+    const sector=TAU/items.length;
+    const target=angleMod(-winner*sector+(secureRandom(10001)/10000-.5)*sector*.48);
+    const diff=angleMod(target-angleMod(rotation));
+    const start=rotation,end=start+(5+secureRandom(3))*TAU+diff;
+    const duration=4400+secureRandom(800);
+    const started=performance.now();
+    function frame(now){
+      const t=Math.min((now-started)/duration,1);
+      const eased=1-Math.pow(1-t,5);
+      rotation=start+(end-start)*eased;
+      drawWheel();
+      if(t<1){requestAnimationFrame(frame);return}
+      rotation=angleMod(end);drawWheel();
+      const chosen=items[winner];
+      history.unshift({name:chosen.name,time:Date.now()});history=history.slice(0,6);
+      storageSet(HISTORY_KEY,history);renderHistory();
+      setResult('🎉 就決定吃「'+chosen.name+'」！','命運已決定！不滿意的話，可以再轉一次 😆',true);
+      spinning=false;renderList();
+    }
+    requestAnimationFrame(frame);
+  }
+  $('add-form').addEventListener('submit',event=>{event.preventDefault();addNames($('new-name').value)});
+  $('choice-list').addEventListener('change',event=>{
+    if(spinning||!event.target.matches('input[type="checkbox"]'))return;
+    const o=options.find(o=>o.id===event.target.dataset.id);if(!o)return;
+    o.checked=event.target.checked;save();renderList();drawWheel();
+    setResult('今天這餐交給命運！','名單已更新，準備好就開始旋轉。',false);
+  });
+  $('choice-list').addEventListener('click',event=>{
+    const btn=event.target.closest('button[data-action]');if(!btn||spinning)return;
+    const o=options.find(o=>o.id===btn.dataset.id);if(!o)return;
+    if(btn.dataset.action==='delete'){
+      options=options.filter(v=>v.id!==o.id);save();renderList();drawWheel();return;
+    }
+    if(btn.dataset.action==='edit'){
+      const row=btn.closest('.entry'),text=row.querySelector('.name'),label=row.querySelector('.check-wrap');
+      label.style.display='none';
+      const field=document.createElement('input');field.className='edit-input';field.value=o.name;field.maxLength=70;field.setAttribute('aria-label','修改店家名稱');
+      row.insertBefore(field,btn);field.focus();field.select();
+      let done=false;
+      const commit=(saveChange)=>{
+        if(done)return;done=true;
+        const val=field.value.trim();
+        if(saveChange&&val){
+          if(options.some(x=>x.id!==o.id&&x.name.toLocaleLowerCase()===val.toLocaleLowerCase()))showNotice('已經有相同名稱的店家了。');
+          else{o.name=val;save()}
+        }
+        renderList();drawWheel();
+      };
+      field.addEventListener('keydown',e=>{if(e.key==='Enter')commit(true);if(e.key==='Escape')commit(false)});
+      field.addEventListener('blur',()=>commit(true));
+    }
+  });
+  $('select-all').addEventListener('click',()=>{if(spinning)return;options.forEach(o=>o.checked=true);save();renderList();drawWheel();setResult('今天這餐交給命運！','已全選候選店家。',false)});
+  $('select-none').addEventListener('click',()=>{if(spinning)return;options.forEach(o=>o.checked=false);save();renderList();drawWheel();setResult('先選幾家想吃的店！','至少勾選一個選項才能轉盤。',false)});
+  $('reset').addEventListener('click',()=>{
+    if(spinning)return;
+    if(!confirm('確定要還原預設範例？目前自訂的店家清單會被取代。'))return;
+    options=defaults();save();renderList();drawWheel();setResult('今天這餐交給命運！','已還原範例店家清單。',false);showNotice('已還原預設範例。');
+  });
+  $('clear-history').addEventListener('click',()=>{history=[];storageSet(HISTORY_KEY,history);renderHistory()});
+  $('spin').addEventListener('click',spin);
+  renderList();renderHistory();resizeCanvas();
+})();
+</script>
+</body>
+</html>
